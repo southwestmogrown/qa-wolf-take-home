@@ -9,7 +9,7 @@
 
 /**
  * @typedef {Object} SortViolation
- * @property {number} index         - 1-based position of the *later* article in the violation pair
+ * @property {number} index         - The `.index` field of the later article in the violation pair
  * @property {Object} earlier       - The article that appeared first on the page
  * @property {Object} later         - The article that appeared second but has a newer timestamp
  * @property {string} message       - Human-readable description of the violation
@@ -34,11 +34,22 @@
  *
  * @param {import('./scraper').Article[]} articles
  * @returns {ValidationResult}
+ * @throws {Error} If articles is not a non-empty array
+ * @throws {Error} If any article has a non-finite timestampMs (NaN, undefined, Infinity)
  */
 
 function validateSortOrder(articles) {
   if (!Array.isArray(articles) || articles.length === 0) {
     throw new Error("validateSortOrder requires a non-empty array of articles.");
+  }
+
+  for (let i = 0; i < articles.length; i++) {
+    if (!Number.isFinite(articles[i].timestampMs)) {
+      throw new Error(
+        `Invalid timestampMs at article index ${i + 1} (position ${i}): ` +
+          `expected a finite number, got ${JSON.stringify(articles[i].timestampMs)}.`
+      );
+    }
   }
 
   const violations = [];

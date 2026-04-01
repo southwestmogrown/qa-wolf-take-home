@@ -19,7 +19,7 @@ const { validateSortOrder } = require("../validator");
  * @param {string} [title]
  */
 function article(index, timestampMs, title = `Article ${index}`) {
-  return { index, timestampMs, title, rawTimestamp: new Date(timestampMs).toISOString() };
+  return { index, timestampMs, title, rawTimestamp: new Date(timestampMs).toISOString().replace(/\.\d{3}Z$/, "") };
 }
 
 // Fixed reference timestamps (ms) — just integers, no real dates needed
@@ -148,4 +148,39 @@ test("checked count matches the number of articles passed in", () => {
   );
   const result = validateSortOrder(articles);
   assert.equal(result.checked, 10);
+});
+
+test("throws when an article has NaN timestampMs", () => {
+  const articles = [
+    article(1, T1),
+    { index: 2, title: "Bad", rawTimestamp: "2024-01-01T00:00:00", timestampMs: NaN },
+  ];
+  assert.throws(() => validateSortOrder(articles), /Invalid timestampMs/);
+});
+
+test("throws when an article has undefined timestampMs", () => {
+  const articles = [
+    article(1, T1),
+    { index: 2, title: "Bad", rawTimestamp: "2024-01-01T00:00:00", timestampMs: undefined },
+  ];
+  assert.throws(() => validateSortOrder(articles), /Invalid timestampMs/);
+});
+
+test("detects a violation at the very first pair", () => {
+  const articles = [article(1, T2), article(2, T1), article(3, T3)];
+  const result = validateSortOrder(articles);
+  assert.equal(result.passed, false);
+  assert.equal(result.violations[0].index, 2);
+});
+
+test("detects a violation at the last pair in a large list", () => {
+  const articles = Array.from({ length: 100 }, (_, i) =>
+    article(i + 1, T1 - i * 1000)
+  );
+  // Swap last two to create a violation at position 100
+  articles[99] = article(100, T1);
+  const result = validateSortOrder(articles);
+  assert.equal(result.passed, false);
+  assert.equal(result.violations.length, 1);
+  assert.equal(result.violations[0].index, 100);
 });

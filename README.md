@@ -44,6 +44,7 @@ validator.js   Pure sort-order logic, returns structured result
 reporter.js    All console output, ANSI-formatted pass/fail summary
 utils/
   time.js      Timestamp parsing and formatting
+  retry.js     Generic async retry with exponential backoff
 ```
 
 **Why this structure?** `validator.js` is pure — no browser, no I/O — which makes it trivially testable in isolation. `reporter.js` owning all output means the format can change (e.g. JSON for CI) without touching business logic.
@@ -96,10 +97,11 @@ npm test
 
 Current suite includes:
 
-- Timestamp parsing/formatting edge cases
-- Retry behavior and failure semantics
-- Sort-order validator correctness and violation reporting
-- Scraper extraction contract checks (selector count mismatches)
+- Timestamp parsing/formatting edge cases (including impossible dates and invalid inputs)
+- Retry behavior and failure semantics (backoff, callback isolation, type guards)
+- Sort-order validator correctness, violation reporting, and invalid-input guards
+- Scraper DOM extraction contract (selector count mismatches, offset indexing)
+- Scraper pagination logic (multi-page collection, empty-page guard, More-link failure)
 
 ---
 

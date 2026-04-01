@@ -3,7 +3,7 @@
  * Entry point. Wires scraper → validator → reporter.
  * This file contains no logic of its own — each concern lives in its module.
  *
- * Run with: node index.js
+ * Run with: npm start
  */
 
 const CONFIG = require("./config");

@@ -22,7 +22,7 @@ const CONFIG = {
   // Without this, Playwright's default headless UA is often detected and blocked.
   // This mimics a current Chrome release on Windows.
   USER_AGENT:
-    "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36",
+    "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/135.0.0.0 Safari/537.36",
 
   // CSS selector for the timestamp anchor — the `title` attribute on the parent
   // `span.age` element contains the absolute ISO 8601 timestamp we parse for ordering

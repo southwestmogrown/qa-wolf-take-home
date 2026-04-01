@@ -163,3 +163,27 @@ test("throws a descriptive error when attempts is less than 1", async () => {
     /attempts must be an integer >= 1/,
   );
 });
+
+test("original error is preserved even when onRetry throws", async () => {
+  const onRetry = () => { throw new Error("callback error"); };
+  const err = await withRetry(alwaysFail("original failure"), {
+    attempts: 2,
+    delayMs: 0,
+    onRetry,
+  }).catch((e) => e);
+  assert.match(err.message, /original failure/);
+});
+
+test("throws a descriptive error when fn is not a function", async () => {
+  await assert.rejects(
+    () => withRetry("not a function", { attempts: 1 }),
+    /expects a function/,
+  );
+});
+
+test("throws a descriptive error when backoffFactor is less than 1", async () => {
+  await assert.rejects(
+    () => withRetry(async () => "ok", { backoffFactor: 0.5 }),
+    /backoffFactor must be a finite number >= 1/,
+  );
+});

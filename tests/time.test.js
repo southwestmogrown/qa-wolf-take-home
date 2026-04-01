@@ -119,3 +119,23 @@ test("round-trips a known timestamp through parse then format", () => {
   // The formatted string should still represent the same point in time
   assert.equal(new Date(formatted).toISOString(), "2024-06-15T12:00:00.000Z");
 });
+
+test("throws when given an impossible date (Feb 30)", () => {
+  assert.throws(() => parseHNTimestamp("2024-02-30T00:00:00"), /out of range/);
+});
+
+test("throws when given an impossible month (month 13)", () => {
+  assert.throws(() => parseHNTimestamp("2024-13-01T00:00:00"), /out of range/);
+});
+
+test("throws when given an impossible hour (hour 25)", () => {
+  assert.throws(() => parseHNTimestamp("2024-01-01T25:00:00"), /out of range/);
+});
+
+test("formatTimestamp throws when given NaN", () => {
+  assert.throws(() => formatTimestamp(NaN), /finite number/);
+});
+
+test("formatTimestamp throws when given Infinity", () => {
+  assert.throws(() => formatTimestamp(Infinity), /finite number/);
+});

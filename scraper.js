@@ -5,6 +5,11 @@
  *
  * This module owns the browser lifecycle. It opens, uses, and closes the
  * browser — callers receive clean data, not Playwright handles.
+ *
+ * Exports:
+ *   scrapeArticles()         - Full end-to-end scrape (browser + pagination)
+ *   collectArticles()        - Pagination logic only; accepts a mock page for unit tests
+ *   extractArticlesFromPage() - Single-page DOM extraction; accepts a mock page for unit tests
  */
 
 const { chromium } = require("playwright");
@@ -32,6 +37,8 @@ const { parseHNTimestamp } = require("./utils/time");
  * @param {number} offset - How many articles have been collected so far,
  *                          used to assign globally correct 1-based indexes
  * @returns {Promise<Article[]>}
+ * @throws {Error} If the number of age elements and title elements on the page differs
+ * @throws {Error} If any article's title text is empty
  */
 async function extractArticlesFromPage(page, offset) {
   const extraction = await page.evaluate(
@@ -86,6 +93,62 @@ async function extractArticlesFromPage(page, offset) {
 }
 
 /**
+ * Paginates through HN's /newest feed and collects exactly `targetCount`
+ * articles. Separated from browser setup so it can be unit-tested with a
+ * mock page object.
+ *
+ * @param {import('playwright').Page} page - An already-navigated Playwright page
+ * @param {number} targetCount - How many articles to collect
+ * @returns {Promise<Article[]>} Exactly targetCount articles in page order
+ * @throws {Error} If a page yields zero articles (bot-detection soft-block or selector drift)
+ * @throws {Error} If the "More" pagination link is absent before targetCount is reached
+ */
+async function collectArticles(page, targetCount) {
+  const articles = [];
+
+  while (articles.length < targetCount) {
+    await page.waitForSelector(CONFIG.AGE_SELECTOR);
+
+    const pageArticles = await extractArticlesFromPage(page, articles.length);
+
+    // Guard against empty pages — indicates bot-detection soft-block or selector drift
+    if (pageArticles.length === 0) {
+      throw new Error(
+        `No articles found on page after collecting ${articles.length}. ` +
+          `Possible bot detection or selector drift.`,
+      );
+    }
+
+    const needed = targetCount - articles.length;
+
+    // Slice to exactly what we need — the last page may have more than required
+    articles.push(...pageArticles.slice(0, needed));
+
+    if (articles.length >= targetCount) break;
+
+    // Navigate to the next page. If "More" is missing before we hit our
+    // target count, HN has fewer articles available than expected.
+    const moreLink = page.locator(CONFIG.MORE_LINK_SELECTOR);
+    const moreLinkCount = await moreLink.count();
+
+    if (moreLinkCount === 0) {
+      throw new Error(
+        `Pagination failed: reached end of HN /newest after ${articles.length} articles ` +
+          `but needed ${targetCount}. HN may have fewer articles available.`,
+      );
+    }
+
+    // Click then wait — avoids the race condition in the deprecated
+    // Promise.all([waitForNavigation(), click()]) pattern where the navigation
+    // event could fire before the listener was fully attached.
+    await moreLink.click();
+    await page.waitForLoadState("domcontentloaded");
+  }
+
+  return articles;
+}
+
+/**
  * Launches a Playwright browser, navigates HN's /newest feed, and collects
  * exactly CONFIG.ARTICLE_COUNT articles by paginating as needed.
  *
@@ -102,46 +165,13 @@ async function scrapeArticles() {
   page.setDefaultTimeout(CONFIG.SELECTOR_TIMEOUT_MS);
   page.setDefaultNavigationTimeout(CONFIG.NAVIGATION_TIMEOUT_MS);
 
-  const articles = [];
-
   try {
     await page.goto(CONFIG.HN_NEWEST_URL, { waitUntil: "domcontentloaded" });
-
-    while (articles.length < CONFIG.ARTICLE_COUNT) {
-      // Wait for age elements to confirm the article list is fully rendered
-      await page.waitForSelector(CONFIG.AGE_SELECTOR);
-
-      const pageArticles = await extractArticlesFromPage(page, articles.length);
-      const needed = CONFIG.ARTICLE_COUNT - articles.length;
-
-      // Slice to exactly what we need — the last page may have more than required
-      articles.push(...pageArticles.slice(0, needed));
-
-      if (articles.length >= CONFIG.ARTICLE_COUNT) break;
-
-      // Navigate to the next page. If "More" is missing before we hit our
-      // target count, HN has fewer articles available than expected.
-      const moreLink = page.locator(CONFIG.MORE_LINK_SELECTOR);
-      const moreLinkCount = await moreLink.count();
-
-      if (moreLinkCount === 0) {
-        throw new Error(
-          `Pagination failed: reached end of HN /newest after ${articles.length} articles ` +
-            `but needed ${CONFIG.ARTICLE_COUNT}. HN may have fewer articles available.`,
-        );
-      }
-
-      await Promise.all([
-        page.waitForNavigation({ waitUntil: "domcontentloaded" }),
-        moreLink.click(),
-      ]);
-    }
+    return await collectArticles(page, CONFIG.ARTICLE_COUNT);
   } finally {
     // Always close the browser — even if scraping throws — so the process exits cleanly
     await browser.close();
   }
-
-  return articles;
 }
 
-module.exports = { scrapeArticles, extractArticlesFromPage };
+module.exports = { scrapeArticles, extractArticlesFromPage, collectArticles };

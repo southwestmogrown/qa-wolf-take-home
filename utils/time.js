@@ -14,7 +14,8 @@
  *
  * @param {string} titleAttr - Raw value of the `title` attribute, e.g. "2024-01-15T14:23:07"
  * @returns {number} Unix timestamp in milliseconds
- * @throws {Error} If the attribute is missing or unparseable
+ * @throws {Error} If the attribute is missing, not a string, or not in the expected format
+ * @throws {Error} If the date values are out of range (e.g. month 13, Feb 30, hour 25)
  */
 function parseHNTimestamp(titleAttr) {
   if (!titleAttr || typeof titleAttr !== "string") {
@@ -43,10 +44,31 @@ function parseHNTimestamp(titleAttr) {
 
   const ms = Date.parse(normalized);
 
+  // Cross-check parsed date components to catch silent rollovers.
+  // e.g. "2024-02-30" passes the regex but Date.parse may roll it to March 1.
+  const [datePart, timePart] = normalized.replace("Z", "").split("T");
+  const [year, month, day] = datePart.split("-").map(Number);
+  const [hour, minute, second] = timePart.split(":").map(Number);
+
   if (isNaN(ms)) {
     throw new Error(
       `Failed to parse timestamp from title attribute: "${titleAttr}". ` +
-        `Expected ISO 8601 format (e.g. "2024-01-15T14:23:07").`,
+        `The date values are out of range (e.g. month 13, Feb 30).`,
+    );
+  }
+
+  const parsed = new Date(ms);
+  if (
+    parsed.getUTCFullYear() !== year ||
+    parsed.getUTCMonth() + 1 !== month ||
+    parsed.getUTCDate() !== day ||
+    parsed.getUTCHours() !== hour ||
+    parsed.getUTCMinutes() !== minute ||
+    parsed.getUTCSeconds() !== second
+  ) {
+    throw new Error(
+      `Failed to parse timestamp from title attribute: "${titleAttr}". ` +
+        `The date values are out of range (e.g. month 13, Feb 30).`,
     );
   }
 
@@ -59,8 +81,14 @@ function parseHNTimestamp(titleAttr) {
  *
  * @param {number} ms - Unix timestamp in milliseconds
  * @returns {string} Human-readable UTC date string
+ * @throws {Error} If ms is not a finite number (NaN, Infinity, etc.)
  */
 function formatTimestamp(ms) {
+  if (!Number.isFinite(ms)) {
+    throw new Error(
+      `formatTimestamp requires a finite number, got ${JSON.stringify(ms)}`,
+    );
+  }
   return new Date(ms).toUTCString();
 }
 
