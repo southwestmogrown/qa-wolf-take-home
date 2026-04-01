@@ -19,7 +19,19 @@
 function parseHNTimestamp(titleAttr) {
   if (!titleAttr || typeof titleAttr !== "string") {
     throw new Error(
-      `Invalid timestamp attribute: expected a non-empty string, got ${JSON.stringify(titleAttr)}`
+      `Invalid timestamp attribute: expected a non-empty string, got ${JSON.stringify(titleAttr)}`,
+    );
+  }
+
+  const trimmed = titleAttr.trim();
+
+  // HN emits second-precision datetimes. Enforce this contract so malformed
+  // scraper input fails loudly instead of being coerced into a different shape.
+  const hnFormat = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}Z?$/;
+  if (!hnFormat.test(trimmed)) {
+    throw new Error(
+      `Failed to parse timestamp from title attribute: "${titleAttr}". ` +
+        `Expected format "YYYY-MM-DDTHH:mm:ss" (optionally ending with "Z").`,
     );
   }
 
@@ -27,16 +39,14 @@ function parseHNTimestamp(titleAttr) {
   // which matches HN's server behavior. Appending 'Z' ensures Date.parse
   // interprets them as UTC rather than local time, which would produce
   // inconsistent results depending on the machine running the test.
-  const normalized = titleAttr.trim().endsWith("Z")
-    ? titleAttr.trim()
-    : `${titleAttr.trim()}Z`;
+  const normalized = trimmed.endsWith("Z") ? trimmed : `${trimmed}Z`;
 
   const ms = Date.parse(normalized);
 
   if (isNaN(ms)) {
     throw new Error(
       `Failed to parse timestamp from title attribute: "${titleAttr}". ` +
-        `Expected ISO 8601 format (e.g. "2024-01-15T14:23:07").`
+        `Expected ISO 8601 format (e.g. "2024-01-15T14:23:07").`,
     );
   }
 

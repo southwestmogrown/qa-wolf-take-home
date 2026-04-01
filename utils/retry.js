@@ -22,7 +22,28 @@
  * @returns {Promise<any>} Resolves with fn()'s return value on the first success
  * @throws  {Error}        The last error thrown by fn() if all attempts are exhausted
  */
-async function withRetry(fn, { attempts = 3, delayMs = 2000, backoffFactor = 2, onRetry } = {}) {
+async function withRetry(
+  fn,
+  { attempts = 3, delayMs = 2000, backoffFactor = 2, onRetry } = {},
+) {
+  if (!Number.isInteger(attempts) || attempts < 1) {
+    throw new Error(
+      `Invalid retry configuration: attempts must be an integer >= 1, got ${attempts}`,
+    );
+  }
+
+  if (!Number.isFinite(delayMs) || delayMs < 0) {
+    throw new Error(
+      `Invalid retry configuration: delayMs must be a finite number >= 0, got ${delayMs}`,
+    );
+  }
+
+  if (!Number.isFinite(backoffFactor) || backoffFactor < 1) {
+    throw new Error(
+      `Invalid retry configuration: backoffFactor must be a finite number >= 1, got ${backoffFactor}`,
+    );
+  }
+
   let lastError;
   let wait = delayMs;
 

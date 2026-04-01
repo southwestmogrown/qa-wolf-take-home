@@ -34,23 +34,25 @@ const { parseHNTimestamp } = require("./utils/time");
  * @returns {Promise<Article[]>}
  */
 async function extractArticlesFromPage(page, offset) {
-  const rawArticles = await page.evaluate(
+  const extraction = await page.evaluate(
     ({ ageSelector, titleSelector }) => {
       const ageElements = Array.from(document.querySelectorAll(ageSelector));
       const titleElements = Array.from(
         document.querySelectorAll(titleSelector),
       );
 
-      return ageElements.map((ageEl, i) => ({
-        // The `title` attribute is on the parent span.age element
-        // Format is: "ISO_TIMESTAMP UNIX_SECONDS" - we extract just the ISO part
-        rawTimestamp: (ageEl.parentElement.getAttribute("title") || "").split(
-          " ",
-        )[0],
-        title: titleElements[i]
-          ? titleElements[i].innerText.trim()
-          : `[Article ${i + 1}]`,
-      }));
+      return {
+        ageCount: ageElements.length,
+        titleCount: titleElements.length,
+        rawArticles: ageElements.map((ageEl, i) => ({
+          // The `title` attribute is on the parent span.age element
+          // Format is: "ISO_TIMESTAMP UNIX_SECONDS" - we extract just the ISO part
+          rawTimestamp: (ageEl.parentElement.getAttribute("title") || "").split(
+            " ",
+          )[0],
+          title: titleElements[i] ? titleElements[i].innerText.trim() : "",
+        })),
+      };
     },
     {
       ageSelector: CONFIG.AGE_SELECTOR,
@@ -58,8 +60,21 @@ async function extractArticlesFromPage(page, offset) {
     },
   );
 
+  if (extraction.ageCount !== extraction.titleCount) {
+    throw new Error(
+      `Selector mismatch: found ${extraction.ageCount} timestamps but ${extraction.titleCount} titles on the page. ` +
+        `Selectors may be outdated.`,
+    );
+  }
+
   // Parse timestamps in Node context (cleaner error handling than inside evaluate)
-  return rawArticles.map((raw, i) => {
+  return extraction.rawArticles.map((raw, i) => {
+    if (!raw.title) {
+      throw new Error(
+        `Missing article title at page offset ${offset + i + 1}.`,
+      );
+    }
+
     const timestampMs = parseHNTimestamp(raw.rawTimestamp);
     return {
       index: offset + i + 1,
@@ -129,4 +144,4 @@ async function scrapeArticles() {
   return articles;
 }
 
-module.exports = { scrapeArticles };
+module.exports = { scrapeArticles, extractArticlesFromPage };

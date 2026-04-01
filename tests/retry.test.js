@@ -25,7 +25,9 @@ function failThenSucceed(failCount, value = "ok") {
 
 /** Returns a fn that always rejects with `message`. */
 function alwaysFail(message = "always fails") {
-  return async () => { throw new Error(message); };
+  return async () => {
+    throw new Error(message);
+  };
 }
 
 // ---------------------------------------------------------------------------
@@ -57,7 +59,7 @@ test("succeeds on the last allowed attempt", async () => {
 test("throws the last error when all attempts are exhausted", async () => {
   await assert.rejects(
     () => withRetry(alwaysFail("boom"), { attempts: 3, delayMs: 0 }),
-    /boom/
+    /boom/,
   );
 });
 
@@ -72,7 +74,9 @@ test("throws after exactly `attempts` calls — no extra calls", async () => {
 });
 
 test("does not swallow the error type or message", async () => {
-  const fn = async () => { throw new TypeError("type problem"); };
+  const fn = async () => {
+    throw new TypeError("type problem");
+  };
   const err = await withRetry(fn, { attempts: 2, delayMs: 0 }).catch((e) => e);
   assert.ok(err instanceof TypeError);
   assert.match(err.message, /type problem/);
@@ -84,10 +88,16 @@ test("does not swallow the error type or message", async () => {
 
 test("calls onRetry for each failed attempt except the last", async () => {
   const calls = [];
-  const onRetry = (attempt, total, err, waitMs) => calls.push({ attempt, total, waitMs });
+  const onRetry = (attempt, total, err, waitMs) =>
+    calls.push({ attempt, total, waitMs });
 
-  await assert.rejects(
-    () => withRetry(alwaysFail(), { attempts: 3, delayMs: 0, backoffFactor: 2, onRetry })
+  await assert.rejects(() =>
+    withRetry(alwaysFail(), {
+      attempts: 3,
+      delayMs: 0,
+      backoffFactor: 2,
+      onRetry,
+    }),
   );
 
   // 3 attempts → 2 retries → onRetry called twice
@@ -99,7 +109,9 @@ test("calls onRetry for each failed attempt except the last", async () => {
 
 test("does not call onRetry when fn succeeds on the first attempt", async () => {
   let retryCalled = false;
-  const onRetry = () => { retryCalled = true; };
+  const onRetry = () => {
+    retryCalled = true;
+  };
   await withRetry(async () => "ok", { attempts: 3, delayMs: 0, onRetry });
   assert.equal(retryCalled, false);
 });
@@ -107,8 +119,8 @@ test("does not call onRetry when fn succeeds on the first attempt", async () => 
 test("does not call onRetry on the final failing attempt (nothing to retry)", async () => {
   const retryCounts = [];
   const onRetry = (attempt) => retryCounts.push(attempt);
-  await assert.rejects(
-    () => withRetry(alwaysFail(), { attempts: 1, delayMs: 0, onRetry })
+  await assert.rejects(() =>
+    withRetry(alwaysFail(), { attempts: 1, delayMs: 0, onRetry }),
   );
   assert.equal(retryCounts.length, 0);
 });
@@ -120,8 +132,13 @@ test("does not call onRetry on the final failing attempt (nothing to retry)", as
 test("passes exponentially increasing wait times to onRetry", async () => {
   const waits = [];
   const onRetry = (_, __, ___, waitMs) => waits.push(waitMs);
-  await assert.rejects(
-    () => withRetry(alwaysFail(), { attempts: 4, delayMs: 100, backoffFactor: 2, onRetry })
+  await assert.rejects(() =>
+    withRetry(alwaysFail(), {
+      attempts: 4,
+      delayMs: 100,
+      backoffFactor: 2,
+      onRetry,
+    }),
   );
   // Expected: 100, 200, 400  (3 retries for 4 attempts)
   assert.equal(waits.length, 3);
@@ -138,4 +155,11 @@ test("works with no options object — uses built-in defaults", async () => {
   // Just confirm it doesn't throw when called with defaults and fn succeeds
   const value = await withRetry(async () => 42);
   assert.equal(value, 42);
+});
+
+test("throws a descriptive error when attempts is less than 1", async () => {
+  await assert.rejects(
+    () => withRetry(async () => "ok", { attempts: 0 }),
+    /attempts must be an integer >= 1/,
+  );
 });

@@ -23,9 +23,12 @@ Navigates HN's `/newest` feed across multiple pages (30 articles per page), coll
 On **pass**, a summary confirms the article count and sort result.
 
 On **fail**, each violation is reported with:
+
 - The positions of the two out-of-order articles
 - Both article titles
 - Both parsed timestamps in human-readable UTC
+
+The scraper also includes retry with exponential backoff for transient failures.
 
 ---
 
@@ -54,8 +57,8 @@ HN displays relative timestamps ("3 minutes ago", "2 hours ago") in the UI. Pars
 Instead, this implementation reads the **`title` attribute** on each `.age` anchor element:
 
 ```html
-<span class="age">
-  <a href="item?id=..." title="2024-01-15T14:23:07">3 minutes ago</a>
+<span class="age" title="2024-01-15T14:23:07 1705328587">
+  <a href="item?id=...">3 minutes ago</a>
 </span>
 ```
 
@@ -73,19 +76,36 @@ Two articles published within the same second are valid — HN can post multiple
 
 All tunable values live in `config.js`. No magic numbers in logic files.
 
-| Constant | Default | Purpose |
-|---|---|---|
-| `ARTICLE_COUNT` | `100` | Number of articles to validate |
-| `NAVIGATION_TIMEOUT_MS` | `15000` | Max wait for page navigation |
-| `SELECTOR_TIMEOUT_MS` | `10000` | Max wait for DOM elements |
-| `HN_NEWEST_URL` | `https://news.ycombinator.com/newest` | Target feed |
+| Constant                | Default                               | Purpose                        |
+| ----------------------- | ------------------------------------- | ------------------------------ |
+| `ARTICLE_COUNT`         | `100`                                 | Number of articles to validate |
+| `NAVIGATION_TIMEOUT_MS` | `30000`                               | Max wait for page navigation   |
+| `SELECTOR_TIMEOUT_MS`   | `15000`                               | Max wait for DOM elements      |
+| `HN_NEWEST_URL`         | `https://news.ycombinator.com/newest` | Target feed                    |
+| `RETRY_ATTEMPTS`        | `3`                                   | Total scrape attempts          |
+| `RETRY_DELAY_MS`        | `2000`                                | Initial retry delay            |
+| `RETRY_BACKOFF_FACTOR`  | `2`                                   | Exponential retry multiplier   |
+
+---
+
+## Test Coverage
+
+```bash
+npm test
+```
+
+Current suite includes:
+
+- Timestamp parsing/formatting edge cases
+- Retry behavior and failure semantics
+- Sort-order validator correctness and violation reporting
+- Scraper extraction contract checks (selector count mismatches)
 
 ---
 
 ## What I'd Add With More Time
 
-- **Unit test suite** (Jest or Node's built-in test runner) — the pure modules (`validator.js`, `utils/time.js`) are already structured for easy testing
 - **JSON output mode** — a `--json` flag for CI pipeline consumption
-- **Retry logic** — exponential backoff on navigation failures for flaky network conditions (very relevant to QA Wolf's zero-flake guarantee)
+- **Screenshot/HTML artifact capture on failure** — speed up triage when selectors drift
 - **Headful mode flag** — `--headed` for debugging, headless for CI
-- **Multiple feed comparison** — extend to validate `/newest` vs `/front` ordering differences
+- **CLI flags for article count and timeouts** — e.g., `--count`, `--timeout`, `--retries`

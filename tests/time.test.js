@@ -27,7 +27,7 @@ test("parses a valid ISO 8601 string that already has a trailing Z", () => {
 
 test("produces the same result with or without the Z suffix", () => {
   const withoutZ = parseHNTimestamp("2024-06-01T00:00:00");
-  const withZ    = parseHNTimestamp("2024-06-01T00:00:00Z");
+  const withZ = parseHNTimestamp("2024-06-01T00:00:00Z");
   assert.equal(withoutZ, withZ);
 });
 
@@ -35,7 +35,7 @@ test("interprets timestamps as UTC, not local time", () => {
   // 2024-01-01T00:00:00 UTC should be exactly epoch + known offset
   const ms = parseHNTimestamp("2024-01-01T00:00:00");
   assert.equal(new Date(ms).getUTCFullYear(), 2024);
-  assert.equal(new Date(ms).getUTCMonth(), 0);   // January
+  assert.equal(new Date(ms).getUTCMonth(), 0); // January
   assert.equal(new Date(ms).getUTCDate(), 1);
   assert.equal(new Date(ms).getUTCHours(), 0);
 });
@@ -63,47 +63,36 @@ test("newer timestamps produce larger ms values than older ones", () => {
 // ---------------------------------------------------------------------------
 
 test("throws when given an empty string", () => {
-  assert.throws(
-    () => parseHNTimestamp(""),
-    /Invalid timestamp attribute/
-  );
+  assert.throws(() => parseHNTimestamp(""), /Invalid timestamp attribute/);
 });
 
 test("throws when given null", () => {
-  assert.throws(
-    () => parseHNTimestamp(null),
-    /Invalid timestamp attribute/
-  );
+  assert.throws(() => parseHNTimestamp(null), /Invalid timestamp attribute/);
 });
 
 test("throws when given undefined", () => {
   assert.throws(
     () => parseHNTimestamp(undefined),
-    /Invalid timestamp attribute/
+    /Invalid timestamp attribute/,
   );
 });
 
 test("throws when given a non-string number", () => {
   assert.throws(
     () => parseHNTimestamp(1234567890),
-    /Invalid timestamp attribute/
+    /Invalid timestamp attribute/,
   );
 });
 
 test("throws with a descriptive message when the string is not parseable", () => {
   assert.throws(
     () => parseHNTimestamp("not-a-date"),
-    /Failed to parse timestamp/
+    /Failed to parse timestamp/,
   );
 });
 
 test("throws when given a date-only string (no time component)", () => {
-  // "2024-01-15" alone parses as UTC midnight in modern engines, but HN
-  // always includes a time component — confirm we get a number or throw
-  // (implementation detail: Date.parse("2024-01-15") is valid, so just
-  // confirm no NaN is silently swallowed)
-  const ms = parseHNTimestamp("2024-01-15");
-  assert.ok(!isNaN(ms)); // acceptable — the key is it doesn't return NaN silently
+  assert.throws(() => parseHNTimestamp("2024-01-15"), /Expected format/);
 });
 
 // ---------------------------------------------------------------------------

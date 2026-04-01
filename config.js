@@ -12,10 +12,6 @@ const CONFIG = {
   // so 100 articles requires navigating across 4 pages.
   ARTICLE_COUNT: 100,
 
-  // Articles per HN page (this is a HN constant, not ours — but naming it
-  // makes pagination logic readable and resilient to future changes)
-  ARTICLES_PER_PAGE: 30,
-
   // Playwright navigation timeout in milliseconds
   NAVIGATION_TIMEOUT_MS: 30000,
 
@@ -25,7 +21,8 @@ const CONFIG = {
   // User agent string passed to the browser context.
   // Without this, Playwright's default headless UA is often detected and blocked.
   // This mimics a current Chrome release on Windows.
-  USER_AGENT: "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36",
+  USER_AGENT:
+    "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36",
 
   // CSS selector for the timestamp anchor — the `title` attribute on the parent
   // `span.age` element contains the absolute ISO 8601 timestamp we parse for ordering
@@ -42,8 +39,8 @@ const CONFIG = {
   // On a network failure the full scrape is retried up to RETRY_ATTEMPTS times
   // with exponential backoff: delay doubles after each failed attempt.
   RETRY_ATTEMPTS: 3,
-  RETRY_DELAY_MS: 2000,       // wait before first retry
-  RETRY_BACKOFF_FACTOR: 2,    // multiplier applied to delay on each subsequent retry
+  RETRY_DELAY_MS: 2000, // wait before first retry
+  RETRY_BACKOFF_FACTOR: 2, // multiplier applied to delay on each subsequent retry
 };
 
 module.exports = CONFIG;
