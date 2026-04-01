@@ -1,10 +1,6 @@
 /**
  * utils/retry.js
  * Generic async retry with exponential backoff.
- *
- * Keeping this separate from scraper.js means the retry policy can change
- * (or be tested) without touching browser logic, and it can be reused for
- * any future async operation that needs resilience.
  */
 
 /**
@@ -18,8 +14,8 @@
  * @param {number}             options.delayMs        - Delay before the first retry (ms)
  * @param {number}             options.backoffFactor  - Multiplier applied to delay after each failure
  * @param {(attempt: number, totalAttempts: number, error: Error, waitMs: number) => void} [options.onRetry]
- *   Optional callback invoked before each retry — used by the reporter to log progress.
- *   Any error thrown by onRetry is silently swallowed so it cannot mask the original failure.
+ *   Optional callback invoked before each retry.
+ *   Any error thrown by onRetry is swallowed so it does not mask the real failure.
  * @returns {Promise<any>} Resolves with fn()'s return value on the first success
  * @throws  {Error}        If fn is not a function, or if any config option is invalid
  * @throws  {Error}        The last error thrown by fn() if all attempts are exhausted
@@ -66,7 +62,7 @@ async function withRetry(
           try {
             onRetry(attempt, attempts, err, wait);
           } catch (_) {
-            // onRetry errors must not mask the original failure
+            // Ignore reporter/log callback failures.
           }
         }
         await new Promise((resolve) => setTimeout(resolve, wait));

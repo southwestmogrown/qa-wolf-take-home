@@ -1,4 +1,4 @@
-# QA Wolf Take-Home — HN Sort Order Validation
+# QA Wolf Take-Home - HN Sort Order Validation
 
 Validates that the first 100 articles on [Hacker News /newest](https://news.ycombinator.com/newest) are sorted from newest to oldest.
 
@@ -18,23 +18,23 @@ node index.js
 
 ## What It Does
 
-Navigates HN's `/newest` feed across multiple pages (30 articles per page), collects the first 100 articles, and asserts that each article's timestamp is equal to or older than the one before it.
+Walks HN's `/newest` pages (30 items per page), grabs the first 100 articles, and checks that each item is the same age or older than the one above it.
 
-On **pass**, a summary confirms the article count and sort result.
+On **pass**, you get a short summary.
 
-On **fail**, each violation is reported with:
+On **fail**, each violation includes:
 
 - The positions of the two out-of-order articles
 - Both article titles
 - Both parsed timestamps in human-readable UTC
 
-The scraper also includes retry with exponential backoff for transient failures.
+The scrape step retries transient failures with exponential backoff.
 
 ---
 
 ## Architecture
 
-Each module has one responsibility. `index.js` wires them together and contains no logic of its own.
+Each module has one job. `index.js` just wires them together.
 
 ```
 index.js       Entry point — scrape → validate → report
@@ -47,13 +47,13 @@ utils/
   retry.js     Generic async retry with exponential backoff
 ```
 
-**Why this structure?** `validator.js` is pure — no browser, no I/O — which makes it trivially testable in isolation. `reporter.js` owning all output means the format can change (e.g. JSON for CI) without touching business logic.
+`validator.js` stays pure (no browser or I/O), so unit tests are easy. `reporter.js` owns output formatting, so changing output (for example JSON in CI) does not ripple into core logic.
 
 ---
 
-## Key Design Decision: Timestamp Source
+## Timestamp Source
 
-HN displays relative timestamps ("3 minutes ago", "2 hours ago") in the UI. Parsing these strings is ambiguous — multiple articles can share the same relative label, making precise sort comparison unreliable.
+HN shows relative labels in the UI ("3 minutes ago", "2 hours ago"). Those are not reliable for strict ordering because many articles can share the same label.
 
 Instead, this implementation reads the **`title` attribute** on each `.age` anchor element:
 
@@ -63,19 +63,19 @@ Instead, this implementation reads the **`title` attribute** on each `.age` anch
 </span>
 ```
 
-HN stores the absolute ISO 8601 timestamp here. Parsing this gives millisecond-precision comparison, which correctly handles ties (same-second articles are not flagged as violations) and avoids any ambiguity in relative string parsing.
+HN stores the absolute ISO 8601 timestamp in that attribute. Parsing it gives precise ordering and handles ties correctly (same-second items are not marked as violations).
 
 ---
 
 ## Equal Timestamps
 
-Two articles published within the same second are valid — HN can post multiple items simultaneously. The validator treats `a.timestampMs === b.timestampMs` as passing, not a violation.
+Two articles with the same second-level timestamp are valid. The validator treats `a.timestampMs === b.timestampMs` as pass.
 
 ---
 
 ## Configuration
 
-All tunable values live in `config.js`. No magic numbers in logic files.
+All tunable values live in `config.js`.
 
 | Constant                | Default                               | Purpose                        |
 | ----------------------- | ------------------------------------- | ------------------------------ |
@@ -97,17 +97,17 @@ npm test
 
 Current suite includes:
 
-- Timestamp parsing/formatting edge cases (including impossible dates and invalid inputs)
-- Retry behavior and failure semantics (backoff, callback isolation, type guards)
-- Sort-order validator correctness, violation reporting, and invalid-input guards
-- Scraper DOM extraction contract (selector count mismatches, offset indexing)
-- Scraper pagination logic (multi-page collection, empty-page guard, More-link failure)
+- Timestamp parsing/formatting edge cases (including impossible dates and invalid input)
+- Retry behavior (backoff, callback isolation, type guards)
+- Sort-order validator behavior and violation reporting
+- Scraper DOM extraction checks (selector count mismatches, offset indexing)
+- Scraper pagination behavior (multi-page collection, empty-page guard, missing More link)
 
 ---
 
 ## What I'd Add With More Time
 
-- **JSON output mode** — a `--json` flag for CI pipeline consumption
-- **Screenshot/HTML artifact capture on failure** — speed up triage when selectors drift
-- **Headful mode flag** — `--headed` for debugging, headless for CI
-- **CLI flags for article count and timeouts** — e.g., `--count`, `--timeout`, `--retries`
+- **JSON output mode** - `--json` for CI consumption
+- **Failure artifacts** - screenshot/HTML capture when selectors drift
+- **Headful mode flag** - `--headed` for local debugging
+- **CLI overrides** - `--count`, `--timeout`, `--retries`

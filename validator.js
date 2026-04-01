@@ -1,10 +1,6 @@
 /**
  * validator.js
- * Pure validation logic — no browser, no I/O, no side effects.
- * Takes an array of articles and returns a structured result describing
- * whether they are sorted correctly, and exactly where any violations occur.
- *
- * Keeping this module pure makes it trivially unit-testable in isolation.
+ * Sort-order validation.
  */
 
 /**
@@ -26,11 +22,7 @@
  * Validates that an array of HN articles is sorted from newest to oldest
  * (i.e., descending by timestampMs).
  *
- * Equal timestamps are treated as valid — HN can publish multiple articles
- * within the same second, and that is not a sort violation.
- *
- * All violations are collected before returning, rather than failing fast,
- * so that a single run gives a complete picture of the page's sort state.
+ * Equal timestamps are valid. Returns all violations in one pass.
  *
  * @param {import('./scraper').Article[]} articles
  * @returns {ValidationResult}
@@ -40,14 +32,16 @@
 
 function validateSortOrder(articles) {
   if (!Array.isArray(articles) || articles.length === 0) {
-    throw new Error("validateSortOrder requires a non-empty array of articles.");
+    throw new Error(
+      "validateSortOrder requires a non-empty array of articles.",
+    );
   }
 
   for (let i = 0; i < articles.length; i++) {
     if (!Number.isFinite(articles[i].timestampMs)) {
       throw new Error(
         `Invalid timestampMs at article index ${i + 1} (position ${i}): ` +
-          `expected a finite number, got ${JSON.stringify(articles[i].timestampMs)}.`
+          `expected a finite number, got ${JSON.stringify(articles[i].timestampMs)}.`,
       );
     }
   }
@@ -58,8 +52,6 @@ function validateSortOrder(articles) {
     const prev = articles[i - 1];
     const curr = articles[i];
 
-    // A violation occurs when a later article is *newer* than the one before it.
-    // Newer = higher timestampMs value.
     if (curr.timestampMs > prev.timestampMs) {
       violations.push({
         index: curr.index,

@@ -1,11 +1,6 @@
 /**
  * utils/time.js
- * Utilities for parsing and comparing HN article timestamps.
- *
- * HN's `.age` anchor elements carry an absolute ISO 8601 timestamp in their
- * `title` attribute (e.g. "2024-01-15T14:23:07"). This is far more reliable
- * than parsing relative display text like "3 minutes ago", which is lossy and
- * ambiguous when multiple articles share the same relative label.
+ * Parse and format HN article timestamps.
  */
 
 /**
@@ -26,8 +21,7 @@ function parseHNTimestamp(titleAttr) {
 
   const trimmed = titleAttr.trim();
 
-  // HN emits second-precision datetimes. Enforce this contract so malformed
-  // scraper input fails loudly instead of being coerced into a different shape.
+  // Enforce the exact timestamp shape we expect from HN.
   const hnFormat = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}Z?$/;
   if (!hnFormat.test(trimmed)) {
     throw new Error(
@@ -36,16 +30,12 @@ function parseHNTimestamp(titleAttr) {
     );
   }
 
-  // HN stores timestamps without a timezone suffix. We treat them as UTC,
-  // which matches HN's server behavior. Appending 'Z' ensures Date.parse
-  // interprets them as UTC rather than local time, which would produce
-  // inconsistent results depending on the machine running the test.
+  // HN timestamps are UTC; append Z when missing so parse is machine-independent.
   const normalized = trimmed.endsWith("Z") ? trimmed : `${trimmed}Z`;
 
   const ms = Date.parse(normalized);
 
-  // Cross-check parsed date components to catch silent rollovers.
-  // e.g. "2024-02-30" passes the regex but Date.parse may roll it to March 1.
+  // Catch rollover dates like 2024-02-30 -> Mar 1.
   const [datePart, timePart] = normalized.replace("Z", "").split("T");
   const [year, month, day] = datePart.split("-").map(Number);
   const [hour, minute, second] = timePart.split(":").map(Number);
@@ -77,7 +67,6 @@ function parseHNTimestamp(titleAttr) {
 
 /**
  * Formats a Unix millisecond timestamp as a human-readable UTC string.
- * Used in failure reports to make out-of-order articles easy to read.
  *
  * @param {number} ms - Unix timestamp in milliseconds
  * @returns {string} Human-readable UTC date string
