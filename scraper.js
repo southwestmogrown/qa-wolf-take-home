@@ -37,19 +37,25 @@ async function extractArticlesFromPage(page, offset) {
   const rawArticles = await page.evaluate(
     ({ ageSelector, titleSelector }) => {
       const ageElements = Array.from(document.querySelectorAll(ageSelector));
-      const titleElements = Array.from(document.querySelectorAll(titleSelector));
+      const titleElements = Array.from(
+        document.querySelectorAll(titleSelector),
+      );
 
       return ageElements.map((ageEl, i) => ({
         // The `title` attribute is on the parent span.age element
         // Format is: "ISO_TIMESTAMP UNIX_SECONDS" - we extract just the ISO part
-        rawTimestamp: (ageEl.parentElement.getAttribute("title") || "").split(" ")[0],
-        title: titleElements[i] ? titleElements[i].innerText.trim() : `[Article ${i + 1}]`,
+        rawTimestamp: (ageEl.parentElement.getAttribute("title") || "").split(
+          " ",
+        )[0],
+        title: titleElements[i]
+          ? titleElements[i].innerText.trim()
+          : `[Article ${i + 1}]`,
       }));
     },
     {
       ageSelector: CONFIG.AGE_SELECTOR,
       titleSelector: CONFIG.TITLE_SELECTOR,
-    }
+    },
   );
 
   // Parse timestamps in Node context (cleaner error handling than inside evaluate)
@@ -75,7 +81,7 @@ async function extractArticlesFromPage(page, offset) {
  */
 async function scrapeArticles() {
   const browser = await chromium.launch({ headless: true });
-  const context = await browser.newContext();
+  const context = await browser.newContext({ userAgent: CONFIG.USER_AGENT });
   const page = await context.newPage();
 
   page.setDefaultTimeout(CONFIG.SELECTOR_TIMEOUT_MS);
@@ -106,7 +112,7 @@ async function scrapeArticles() {
       if (moreLinkCount === 0) {
         throw new Error(
           `Pagination failed: reached end of HN /newest after ${articles.length} articles ` +
-            `but needed ${CONFIG.ARTICLE_COUNT}. HN may have fewer articles available.`
+            `but needed ${CONFIG.ARTICLE_COUNT}. HN may have fewer articles available.`,
         );
       }
 

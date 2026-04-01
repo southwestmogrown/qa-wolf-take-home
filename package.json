@@ -4,7 +4,8 @@
   "description": "Validates that the first 100 articles on HN /newest are sorted from newest to oldest.",
   "main": "index.js",
   "scripts": {
-    "start": "node index.js"
+    "start": "node index.js",
+    "test": "node --test tests/*.test.js"
   },
   "dependencies": {
     "playwright": "^1.44.0"

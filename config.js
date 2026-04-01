@@ -17,10 +17,15 @@ const CONFIG = {
   ARTICLES_PER_PAGE: 30,
 
   // Playwright navigation timeout in milliseconds
-  NAVIGATION_TIMEOUT_MS: 15000,
+  NAVIGATION_TIMEOUT_MS: 30000,
 
   // How long to wait for the article list to appear after navigation
-  SELECTOR_TIMEOUT_MS: 10000,
+  SELECTOR_TIMEOUT_MS: 15000,
+
+  // User agent string passed to the browser context.
+  // Without this, Playwright's default headless UA is often detected and blocked.
+  // This mimics a current Chrome release on Windows.
+  USER_AGENT: "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36",
 
   // CSS selector for the timestamp anchor — the `title` attribute on the parent
   // `span.age` element contains the absolute ISO 8601 timestamp we parse for ordering
@@ -32,6 +37,13 @@ const CONFIG = {
 
   // CSS selector for the "More" pagination link at the bottom of each page
   MORE_LINK_SELECTOR: "a.morelink",
+
+  // Retry configuration for the scrape operation.
+  // On a network failure the full scrape is retried up to RETRY_ATTEMPTS times
+  // with exponential backoff: delay doubles after each failed attempt.
+  RETRY_ATTEMPTS: 3,
+  RETRY_DELAY_MS: 2000,       // wait before first retry
+  RETRY_BACKOFF_FACTOR: 2,    // multiplier applied to delay on each subsequent retry
 };
 
 module.exports = CONFIG;

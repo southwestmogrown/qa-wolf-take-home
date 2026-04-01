@@ -35,6 +35,7 @@
  * @param {import('./scraper').Article[]} articles
  * @returns {ValidationResult}
  */
+
 function validateSortOrder(articles) {
   if (!Array.isArray(articles) || articles.length === 0) {
     throw new Error("validateSortOrder requires a non-empty array of articles.");

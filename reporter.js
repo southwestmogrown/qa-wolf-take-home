@@ -90,6 +90,20 @@ function reportValidationResult(result) {
 }
 
 /**
+ * Reports that a scrape attempt failed and a retry is about to begin.
+ * @param {number} attempt       - The attempt number that just failed (1-based)
+ * @param {number} totalAttempts - Total number of attempts allowed
+ * @param {Error}  error         - The error that caused the failure
+ * @param {number} waitMs        - How long we'll wait before retrying
+ */
+function reportRetryAttempt(attempt, totalAttempts, error, waitMs) {
+  console.log(
+    `\n  ${c("yellow", `↻ Attempt ${attempt}/${totalAttempts} failed`)}  —  ${c("dim", error.message)}`
+  );
+  console.log(`  ${c("dim", `Retrying in ${waitMs / 1000}s…`)}\n`);
+}
+
+/**
  * Reports a fatal error that prevented the test from completing.
  * @param {Error} error
  */
@@ -104,6 +118,7 @@ function reportFatalError(error) {
 module.exports = {
   reportScrapeStart,
   reportScrapeComplete,
+  reportRetryAttempt,
   reportValidationResult,
   reportFatalError,
 };
